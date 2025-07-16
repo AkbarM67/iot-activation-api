@@ -78,15 +78,53 @@ app.post('/activate', (req, res) => {
 /* ========== FORM TAMBAH AKTIVASI ========== */
 app.get('/activations/new', (req, res) => {
   res.send(`
-    <html><body>
-      <h2>Form Tambah Aktivasi (Manual DeviceID Saja)</h2>
-      <form method="POST" action="/activations/new">
-        <label>Device ID:</label><br/>
-        <input type="text" name="deviceId" required/><br/><br/>
-        <button type="submit">Tambah Aktivasi</button>
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Tambah Aktivasi Perangkat</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-blue-50 p-16 min-h-screen font-sans">
+
+      <!-- Tombol Kembali -->
+      <div class="mb-4">
+        <a href="/activations" class="text-blue-700 hover:text-blue-900 text-lg font-medium">
+          ← Kembali
+        </a>
+      </div>
+
+      <!-- Judul -->
+      <h1 class="text-3xl font-bold text-blue-800 mb-8">
+        Tambah Aktivasi Perangkat
+      </h1>
+
+      <!-- Form -->
+      <form method="POST" action="/activations/new" class="max-w-xl bg-white p-8 rounded shadow border border-blue-200">
+        <div class="mb-6">
+          <label for="deviceId" class="block text-lg font-medium text-blue-800 mb-2">
+            Device ID
+          </label>
+          <input
+            type="text"
+            id="deviceId"
+            name="deviceId"
+            required
+            class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+            placeholder="Masukkan Device ID"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
+        >
+          Simpan
+        </button>
       </form>
-      <p><a href="/activations">⬅ Kembali ke Aktivasi</a></p>
-    </body></html>
+
+    </body>
+    </html>
   `);
 });
 
@@ -153,42 +191,58 @@ app.get('/activations', (req, res) => {
     if (err) return res.send('❌ Gagal ambil data.');
 
     let html = `
-      <html>
-        <head>
-          <title>Daftar Aktivasi</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 30px; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background-color: #eee; }
-            .aktif { color: green; font-weight: bold; }
-            .nonaktif { color: red; font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <h2>Daftar Aktivasi Perangkat</h2>
-          <a href="/activations/new">➕ Tambah Aktivasi</a><br/><br/>
-          <table>
-            <tr>
-              <th>Device ID</th><th>Nama Device</th><th>Owner</th>
-              <th>Tanggal Aktif</th><th>Tanggal Akhir</th><th>Status</th>
-            </tr>
+  <!DOCTYPE html>
+  <html lang="id">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Daftar Aktivasi</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-blue-50 p-16 min-h-screen font-sans">
+
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-3xl font-bold text-blue-800">Daftar Aktivasi Perangkat</h2>
+        <a href="/activations/new" class="bg-blue-600 hover:bg-blue-700 text-white text-xl px-6 py-3 rounded shadow">+ Tambah Aktivasi</a>
+      </div>
+
+      <div class="shadow rounded-lg border border-blue-200 overflow-x-auto">
+        <div class="max-h-[500px] overflow-y-auto">
+          <table class="min-w-full text-base text-left divide-y divide-blue-200">
+            <thead class="bg-blue-100 text-blue-800 uppercase text-lg font-semibold sticky top-0 z-10">
+              <tr>
+                <th class="px-4 py-3">Device ID</th>
+                <th class="px-4 py-3">Nama Device</th>
+                <th class="px-4 py-3">Owner</th>
+                <th class="px-4 py-3">Tanggal Aktif</th>
+                <th class="px-4 py-3">Tanggal Akhir</th>
+                <th class="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-blue-100">
+  `;
+
+  results.forEach(row => {
+    html += `
+      <tr class="hover:bg-blue-50 transition">
+        <td class="px-4 py-3">${row.device_id}</td>
+        <td class="px-4 py-3">${row.device_name || '-'}</td>
+        <td class="px-4 py-3">${row.owner}</td>
+        <td class="px-4 py-3">${new Date(row.activation_date).toLocaleString()}</td>
+        <td class="px-4 py-3">${new Date(row.deactivation_date).toLocaleString()}</td>
+        <td class="px-4 py-3 ${row.status === 'Aktif' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}">${row.status}</td>
+      </tr>
     `;
+  });
 
-    results.forEach(row => {
-      html += `
-        <tr>
-          <td>${row.device_id}</td>
-          <td>${row.device_name || '-'}</td>
-          <td>${row.owner}</td>
-          <td>${new Date(row.activation_date).toLocaleString()}</td>
-          <td>${new Date(row.deactivation_date).toLocaleString()}</td>
-          <td class="${row.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${row.status}</td>
-        </tr>
-      `;
-    });
-
-    html += `</table></body></html>`;
+  html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </body>
+  </html>
+  `;
     res.send(html);
   });
 });

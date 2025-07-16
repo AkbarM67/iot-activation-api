@@ -80,7 +80,7 @@ export const activationPage = (results) => {
               name="deviceId"
               required
               class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder="Masukkan Device ID"
+              placeholder="Format: (123ABC)"
             />
           </div>
           <div class="text-right">

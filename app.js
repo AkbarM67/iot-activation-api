@@ -1,5 +1,6 @@
-const express = require('express');
-const mysql = require('mysql2');
+const express = require("express");
+const mysql = require("mysql2");
+const { activationPage } = require("./view");
 const app = express();
 const port = 3000;
 
@@ -8,67 +9,74 @@ app.use(express.urlencoded({ extended: true }));
 
 // DB Connection
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'iot_activation'
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "iot_activation",
 });
 
 db.connect((err) => {
   if (err) {
-    console.error('❌ DB gagal terkoneksi:', err);
+    console.error("❌ DB gagal terkoneksi:", err);
     process.exit(1);
   }
-  console.log('✅ Koneksi DB berhasil');
+  console.log("✅ Koneksi DB berhasil");
 });
 
 /* ========== ENDPOINT IoT AKTIVASI ========== */
-app.post('/activate', (req, res) => {
+app.post("/activate", (req, res) => {
   const { deviceId, owner, activationDate, deactivationDate } = req.body;
 
   if (!deviceId || !activationDate || !deactivationDate) {
-    return res.status(400).json({ message: 'deviceId, activationDate, dan deactivationDate wajib diisi' });
+    return res
+      .status(400)
+      .json({
+        message: "deviceId, activationDate, dan deactivationDate wajib diisi",
+      });
   }
 
-  const finalOwner = owner || 'Unknown';
+  const finalOwner = owner || "Unknown";
 
   // 1. Cek apakah device sudah terdaftar di tabel devices
-  db.query('SELECT * FROM devices WHERE id = ?', [deviceId], (err, result) => {
+  db.query("SELECT * FROM devices WHERE id = ?", [deviceId], (err, result) => {
     if (err) return res.status(500).json({ error: err });
 
     if (result.length === 0) {
       // ❌ Device tidak ditemukan, tolak permintaan
-      return res.status(404).json({ message: `Device ID '${deviceId}' belum terdaftar di sistem.` });
+      return res
+        .status(404)
+        .json({
+          message: `Device ID '${deviceId}' belum terdaftar di sistem.`,
+        });
     }
 
     // 2. Jika ada, simpan aktivasi
-        db.query(
-        'UPDATE activations SET owner = ?, activation_date = ?, deactivation_date = ? WHERE device_id = ?',
-        [finalOwner, activationDate, deactivationDate, deviceId],
-        (err2, result2) => {
-            if (err2) return res.status(500).json({ error: err2 });
-            res.status(200).json({
-            message: 'Aktivasi diperbarui',
-            deviceId,
-            owner: finalOwner
-            });
-        }
-        );
+    db.query(
+      "UPDATE activations SET owner = ?, activation_date = ?, deactivation_date = ? WHERE device_id = ?",
+      [finalOwner, activationDate, deactivationDate, deviceId],
+      (err2, result2) => {
+        if (err2) return res.status(500).json({ error: err2 });
+        res.status(200).json({
+          message: "Aktivasi diperbarui",
+          deviceId,
+          owner: finalOwner,
+        });
+      }
+    );
   });
-
 
   // 2. Simpan aktivasi
   function simpanAktivasi() {
     db.query(
-      'INSERT INTO activations (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)',
+      "INSERT INTO activations (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)",
       [deviceId, finalOwner, activationDate, deactivationDate],
       (err3, result) => {
         if (err3) return res.status(500).json({ error: err3 });
         res.status(201).json({
-          message: 'Aktivasi sukses',
+          message: "Aktivasi sukses",
           activationId: result.insertId,
           deviceId,
-          owner: finalOwner
+          owner: finalOwner,
         });
       }
     );
@@ -76,7 +84,7 @@ app.post('/activate', (req, res) => {
 });
 
 /* ========== FORM TAMBAH AKTIVASI ========== */
-app.get('/activations/new', (req, res) => {
+app.get("/activations/new", (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="id">
@@ -128,31 +136,42 @@ app.get('/activations/new', (req, res) => {
   `);
 });
 
-app.post('/activations/new', (req, res) => {
+app.post("/activations/new", (req, res) => {
   const { deviceId } = req.body;
 
-  if (!deviceId) return res.send('Device ID wajib diisi. <a href="/activations/new">Kembali</a>');
+  if (!deviceId)
+    return res.send(
+      'Device ID wajib diisi. <a href="/activations/new">Kembali</a>'
+    );
 
-  const owner = 'Unknown';
+  const owner = "Unknown";
   const activationDate = new Date();
   const deactivationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 hari
 
   // 1. Pastikan deviceId sudah ada di tabel devices
-  db.query('SELECT * FROM devices WHERE id = ?', [deviceId], (err, result) => {
+  db.query("SELECT * FROM devices WHERE id = ?", [deviceId], (err, result) => {
     if (err) {
       console.error(err);
-      return res.send('Gagal cek device. <a href="/activations/new">Coba lagi</a>');
+      return res.send(
+        'Gagal cek device. <a href="/activations/new">Coba lagi</a>'
+      );
     }
 
     if (result.length === 0) {
       // Tambahkan device jika belum ada
-      db.query('INSERT INTO devices (id, name) VALUES (?, ?)', [deviceId, 'Unknown'], (err2) => {
-        if (err2) {
-          console.error(err2);
-          return res.send('Gagal menambahkan device. <a href="/activations/new">Coba lagi</a>');
+      db.query(
+        "INSERT INTO devices (id, name) VALUES (?, ?)",
+        [deviceId, "Unknown"],
+        (err2) => {
+          if (err2) {
+            console.error(err2);
+            return res.send(
+              'Gagal menambahkan device. <a href="/activations/new">Coba lagi</a>'
+            );
+          }
+          simpanAktivasi();
         }
-        simpanAktivasi();
-      });
+      );
     } else {
       simpanAktivasi();
     }
@@ -161,21 +180,23 @@ app.post('/activations/new', (req, res) => {
   // 2. Fungsi untuk menyimpan aktivasi
   function simpanAktivasi() {
     db.query(
-      'INSERT INTO activations (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)',
+      "INSERT INTO activations (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)",
       [deviceId, owner, activationDate, deactivationDate],
       (err) => {
         if (err) {
           console.error(err);
-          return res.send('Gagal simpan aktivasi. <a href="/activations/new">Coba lagi</a>');
+          return res.send(
+            'Gagal simpan aktivasi. <a href="/activations/new">Coba lagi</a>'
+          );
         }
-        res.redirect('/activations');
+        res.redirect("/activations");
       }
     );
   }
 });
 
 /* ========== TABEL AKTIVASI ========== */
-app.get('/activations', (req, res) => {
+app.get("/activations", (req, res) => {
   const sql = `
     SELECT a.device_id, d.name AS device_name, a.owner, a.activation_date, a.deactivation_date,
       CASE 
@@ -188,66 +209,14 @@ app.get('/activations', (req, res) => {
   `;
 
   db.query(sql, (err, results) => {
-    if (err) return res.send('❌ Gagal ambil data.');
+    if (err) return res.send("❌ Gagal ambil data.");
 
-    let html = `
-  <!DOCTYPE html>
-  <html lang="id">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Daftar Aktivasi</title>
-      <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="bg-blue-50 p-16 min-h-screen font-sans">
-
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-3xl font-bold text-blue-800">Daftar Aktivasi Perangkat</h2>
-        <a href="/activations/new" class="bg-blue-600 hover:bg-blue-700 text-white text-xl px-6 py-3 rounded shadow">+ Tambah Aktivasi</a>
-      </div>
-
-      <div class="shadow rounded-lg border border-blue-200 overflow-x-auto">
-        <div class="max-h-[500px] overflow-y-auto">
-          <table class="min-w-full text-base text-left divide-y divide-blue-200">
-            <thead class="bg-blue-100 text-blue-800 uppercase text-lg font-semibold sticky top-0 z-10">
-              <tr>
-                <th class="px-4 py-3">Device ID</th>
-                <th class="px-4 py-3">Nama Device</th>
-                <th class="px-4 py-3">Owner</th>
-                <th class="px-4 py-3">Tanggal Aktif</th>
-                <th class="px-4 py-3">Tanggal Akhir</th>
-                <th class="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-blue-100">
-  `;
-
-  results.forEach(row => {
-    html += `
-      <tr class="hover:bg-blue-50 transition">
-        <td class="px-4 py-3">${row.device_id}</td>
-        <td class="px-4 py-3">${row.device_name || '-'}</td>
-        <td class="px-4 py-3">${row.owner}</td>
-        <td class="px-4 py-3">${new Date(row.activation_date).toLocaleString()}</td>
-        <td class="px-4 py-3">${new Date(row.deactivation_date).toLocaleString()}</td>
-        <td class="px-4 py-3 ${row.status === 'Aktif' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}">${row.status}</td>
-      </tr>
-    `;
-  });
-
-  html += `
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </body>
-  </html>
-  `;
+    let html = activationPage(results);
     res.send(html);
   });
 });
 
 /* ========== JALANKAN SERVER ========== */
-app.listen(port, '0.0.0.0', () => {
+app.listen(port, "0.0.0.0", () => {
   console.log(`🚀 Server berjalan di http://192.168.1.30:${port}`);
 });

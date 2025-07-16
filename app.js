@@ -43,8 +43,8 @@ app.post('/activate', (req, res) => {
 
     // 2. Jika ada, simpan aktivasi
     db.query(
-      'INSERT INTO activations (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)',
-      [deviceId, finalOwner, activationDate, deactivationDate],
+      'UPDATE activations WHERE device_id = ? VALUE (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)',
+      [deviceId,deviceId, finalOwner, activationDate, deactivationDate],
       (err2, result2) => {
         if (err2) return res.status(500).json({ error: err2 });
         res.status(201).json({

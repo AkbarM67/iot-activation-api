@@ -42,19 +42,18 @@ app.post('/activate', (req, res) => {
     }
 
     // 2. Jika ada, simpan aktivasi
-    db.query(
-      'UPDATE activations WHERE device_id = ? VALUE (device_id, owner, activation_date, deactivation_date) VALUES (?, ?, ?, ?)',
-      [deviceId,deviceId, finalOwner, activationDate, deactivationDate],
-      (err2, result2) => {
-        if (err2) return res.status(500).json({ error: err2 });
-        res.status(201).json({
-          message: 'Aktivasi sukses',
-          activationId: result2.insertId,
-          deviceId,
-          owner: finalOwner
-        });
-      }
-    );
+        db.query(
+        'UPDATE activations SET owner = ?, activation_date = ?, deactivation_date = ? WHERE device_id = ?',
+        [finalOwner, activationDate, deactivationDate, deviceId],
+        (err2, result2) => {
+            if (err2) return res.status(500).json({ error: err2 });
+            res.status(200).json({
+            message: 'Aktivasi diperbarui',
+            deviceId,
+            owner: finalOwner
+            });
+        }
+        );
   });
 
 

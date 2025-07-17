@@ -156,7 +156,7 @@ app.get("/activations/new", (req, res) => {
     <html lang="id">
     <head>
       <meta charset="UTF-8" />
-      <title>Tambah Aktivasi Perangkat</title>
+      <title>Tambah DeviceID  </title>
       <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-blue-50 p-8 min-h-screen font-sans">
@@ -170,7 +170,7 @@ app.get("/activations/new", (req, res) => {
 
       <!-- Judul -->
       <h1 class="text-3xl font-bold text-blue-800 mb-8">
-        Tambah Aktivasi Perangkat
+        Tambah DeviceID 
       </h1>
 
       <!-- Form -->
@@ -413,7 +413,7 @@ app.get("/activations", (req, res) => {
       </button>
 
       <!-- Judul Modal -->
-      <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah Aktivasi Perangkat</h3>
+      <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah DeviceID </h3>
 
       <!-- Form -->
       <form method="POST" action="/activations/new">

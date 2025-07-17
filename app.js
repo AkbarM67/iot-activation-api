@@ -188,12 +188,16 @@ app.get("/activations/new", (req, res) => {
           />
         </div>
 
-        <button
-          type="submit"
-          class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
-        >
-          Simpan
-        </button>
+          
+
+        <div class="mt-8">
+          <button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
+          >
+            Simpan Aktivasi
+          </button>
+        </div>
       </form>
 
     </body>
@@ -202,7 +206,9 @@ app.get("/activations/new", (req, res) => {
 });
 
 app.post("/activations/new", (req, res) => {
-  const { deviceId } = req.body;
+  const { 
+    deviceId, 
+  } = req.body;
 
   if (!deviceId)
     return res.send(
@@ -212,7 +218,13 @@ app.post("/activations/new", (req, res) => {
   const owner = "Unknown";
   const activationDate = new Date();
   const deactivationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 hari
-  const deviceNameFinal = "Unknown";
+  
+  const finalMacAddress = macAddress || "";
+  const finalManufacturer = manufacturer || "";
+  const finalFirmwareVersion = firmwareVersion || "";
+  const finalFirmwareDescription = firmwareDescription || "";
+  const finalWifiConfiguration = wifiConfiguration || "";
+  const finalIoConfiguration = ioConfiguration || "";
 
   // 1. Pastikan deviceId sudah ada di tabel devices
   db.query("SELECT * FROM devices WHERE id = ?", [deviceId], (err, result) => {
@@ -280,32 +292,108 @@ function generateDeviceConfigPage(deviceId, config) {
       </a>
     </div>
 
-    <!-- Judul -->
-    <h1 class="text-3xl font-bold text-blue-800 mb-8">
-      Konfigurasi Perangkat: ${deviceId}
-    </h1>
+    <!-- Tabel Aktivasi -->
+    <div class="shadow rounded-lg border border-blue-200 overflow-x-auto">
+      <div class="max-h-[600px] overflow-y-auto">
+        <table class="min-w-full text-sm text-left divide-y divide-blue-200">
+          <thead class="bg-blue-100 text-blue-800 uppercase text-xs font-semibold sticky top-0 z-10">
+            <tr>
+              <th class="px-3 py-3 min-w-[100px]">Device ID</th>
+              <th class="px-3 py-3 min-w-[120px]">Nama Device</th>
+              <th class="px-3 py-3 min-w-[100px]">Owner</th>
+              <th class="px-3 py-3 min-w-[130px]">MAC Address</th>
+              <th class="px-3 py-3 min-w-[120px]">Manufacturer</th>
+              <th class="px-3 py-3 min-w-[100px]">Firmware Ver</th>
+              <th class="px-3 py-3 min-w-[150px]">Firmware Desc</th>
+              <th class="px-3 py-3 min-w-[120px]">WiFi Config</th>
+              <th class="px-3 py-3 min-w-[120px]">I/O Config</th>
+              <th class="px-3 py-3 min-w-[130px]">Tanggal Aktif</th>
+              <th class="px-3 py-3 min-w-[130px]">Tanggal Akhir</th>
+              <th class="px-3 py-3 min-w-[80px]">Status</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-blue-100">
+`;
 
-    <!-- Tabel Konfigurasi -->
-    <div class="bg-white border border-blue-200 rounded-lg shadow p-8">
-      <table class="min-w-full text-base text-left">
-        <tbody class="divide-y divide-blue-100">
+    // Loop data
+    results.forEach((row) => {
+      html += `
+      <tr class="hover:bg-blue-50 transition">
+        <td class="px-3 py-3 font-medium">${row.device_id}</td>
+        <td class="px-3 py-3">${row.device_name || "-"}</td>
+        <td class="px-3 py-3">${row.owner}</td>
+        <td class="px-3 py-3 font-mono text-xs">${row.mac_address || "-"}</td>
+        <td class="px-3 py-3">${row.manufacturer || "-"}</td>
+        <td class="px-3 py-3 font-mono text-xs">${row.firmware_version || "-"}</td>
+        <td class="px-3 py-3 max-w-[150px] truncate" title="${row.firmware_description || "-"}">${row.firmware_description || "-"}</td>
+        <td class="px-3 py-3 max-w-[120px] truncate font-mono text-xs" title="${row.wifi_configuration || "-"}">${row.wifi_configuration || "-"}</td>
+        <td class="px-3 py-3 max-w-[120px] truncate font-mono text-xs" title="${row.io_configuration || "-"}">${row.io_configuration || "-"}</td>
+        <td class="px-3 py-3 text-xs">${new Date(row.activation_date).toLocaleString()}</td>
+        <td class="px-3 py-3 text-xs">${new Date(row.deactivation_date).toLocaleString()}</td>
+        <td class="px-3 py-3 ${
+          row.status === "Aktif"
+            ? "text-green-600 font-bold"
+            : "text-red-600 font-bold"
+        }">${row.status}</td>
+      </tr>
+    `;
+    });
 
-          ${renderRow("MAC Address", config.mac_address)}
-          ${renderRow("Author", config.author)}
-          ${renderRow("Manufacturer", config.manufacturer)}
-          ${renderRow("Firmware Version", config.firmware_version)}
-          ${renderRow("Firmware Description", config.firmware_description)}
-          ${renderRow("WiFi SSID", config.wifi_ssid)}
-          ${renderRow("WiFi Password", config.wifi_password)}
-          ${renderRow("Endpoint Host", config.endpoint_host)}
-          ${renderRow("Endpoint Port", config.endpoint_port)}
-          ${renderRow("Endpoint Path", config.endpoint_path)}
-          ${renderRow("IO Pin", config.io_pin)}
-          ${renderRow("Terakhir Diperbarui", new Date(config.updated_at).toLocaleString())}
-
-        </tbody>
-      </table>
+    // Akhiran HTML
+    html += `
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- Modal Tambah Aktivasi -->
+    <!-- Modal Tambah Aktivasi -->
+<div id="modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+    <div class="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
+      
+      <!-- Tombol Close -->
+      <button
+        onclick="document.getElementById('modal').classList.add('hidden')"
+        class="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-xl"
+      >
+        &times;
+      </button>
+
+      <!-- Judul Modal -->
+      <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah Aktivasi Perangkat</h3>
+
+      <!-- Form -->
+      <form method="POST" action="/activations/new">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Device ID -->
+          <div class="mb-4">
+            <label for="modalDeviceId" class="block text-sm font-medium text-blue-800 mb-2">
+              Device ID *
+            </label>
+            <input
+              type="text"
+              id="modalDeviceId"
+              name="deviceId"
+              required
+              class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="123ABC"
+            />
+          </div>
+        </div>
+
+        <!-- Tombol Simpan -->
+        <div class="text-right mt-6">
+          <button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 
   </body>
 </html>
@@ -349,3 +437,4 @@ app.get("/activations", (req, res) => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`🚀 Server berjalan di http://192.168.1.30:${port}`);
 });
+

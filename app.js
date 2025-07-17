@@ -192,91 +192,7 @@ app.get("/activations/new", (req, res) => {
             />
           </div>
 
-          <!-- MAC Address -->
-          <div class="mb-6">
-            <label for="macAddress" class="block text-lg font-medium text-blue-800 mb-2">
-              MAC Address
-            </label>
-            <input
-              type="text"
-              id="macAddress"
-              name="macAddress"
-              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder="00:11:22:33:44:55"
-            />
-          </div>
-
-          <!-- Manufacturer -->
-          <div class="mb-6">
-            <label for="manufacturer" class="block text-lg font-medium text-blue-800 mb-2">
-              Manufacturer
-            </label>
-            <input
-              type="text"
-              id="manufacturer"
-              name="manufacturer"
-              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder="Nama Manufacturer"
-            />
-          </div>
-
-          <!-- Firmware Version -->
-          <div class="mb-6">
-            <label for="firmwareVersion" class="block text-lg font-medium text-blue-800 mb-2">
-              Firmware Version
-            </label>
-            <input
-              type="text"
-              id="firmwareVersion"
-              name="firmwareVersion"
-              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder="1.0.0"
-            />
-          </div>
-
-          <!-- Firmware Description -->
-          <div class="mb-6 md:col-span-2">
-            <label for="firmwareDescription" class="block text-lg font-medium text-blue-800 mb-2">
-              Firmware Description
-            </label>
-            <textarea
-              id="firmwareDescription"
-              name="firmwareDescription"
-              rows="3"
-              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder="Deskripsi firmware..."
-            ></textarea>
-          </div>
-
-          <!-- WiFi Configuration -->
-          <div class="mb-6">
-            <label for="wifiConfiguration" class="block text-lg font-medium text-blue-800 mb-2">
-              WiFi Configuration
-            </label>
-            <textarea
-              id="wifiConfiguration"
-              name="wifiConfiguration"
-              rows="4"
-              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder='{"ssid": "MyWiFi", "password": "****", "security": "WPA2"}'
-            ></textarea>
-          </div>
-
-          <!-- I/O Configuration -->
-          <div class="mb-6">
-            <label for="ioConfiguration" class="block text-lg font-medium text-blue-800 mb-2">
-              I/O Configuration
-            </label>
-            <textarea
-              id="ioConfiguration"
-              name="ioConfiguration"
-              rows="4"
-              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              placeholder='{"inputs": ["GPIO1", "GPIO2"], "outputs": ["GPIO3", "GPIO4"]}'
-            ></textarea>
-          </div>
-
-        </div>
+          
 
         <div class="mt-8">
           <button
@@ -296,12 +212,6 @@ app.get("/activations/new", (req, res) => {
 app.post("/activations/new", (req, res) => {
   const { 
     deviceId, 
-    macAddress, 
-    manufacturer, 
-    firmwareVersion, 
-    firmwareDescription, 
-    wifiConfiguration, 
-    ioConfiguration 
   } = req.body;
 
   if (!deviceId)
@@ -314,8 +224,8 @@ app.post("/activations/new", (req, res) => {
   const deactivationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 hari
   
   const finalMacAddress = macAddress || "";
-  const finalManufacturer = manufacturer || "Unknown";
-  const finalFirmwareVersion = firmwareVersion || "1.0.0";
+  const finalManufacturer = manufacturer || "";
+  const finalFirmwareVersion = firmwareVersion || "";
   const finalFirmwareDescription = firmwareDescription || "";
   const finalWifiConfiguration = wifiConfiguration || "";
   const finalIoConfiguration = ioConfiguration || "";
@@ -490,124 +400,53 @@ app.get("/activations", (req, res) => {
     </div>
 
     <!-- Modal Tambah Aktivasi -->
-    <div id="modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 hidden">
-      <div class="bg-white p-6 rounded shadow-lg max-w-2xl w-full mx-4 border border-blue-200 relative max-h-[90vh] overflow-y-auto">
-        <button onclick="document.getElementById('modal').classList.add('hidden')" class="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-xl">&times;</button>
-        <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah Aktivasi Perangkat</h3>
-        <form method="POST" action="/activations/new">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <!-- Device ID -->
-            <div class="mb-4">
-              <label for="modalDeviceId" class="block text-sm font-medium text-blue-800 mb-2">
-                Device ID *
-              </label>
-              <input
-                type="text"
-                id="modalDeviceId"
-                name="deviceId"
-                required
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="123ABC"
-              />
-            </div>
+    <!-- Modal Tambah Aktivasi -->
+<div id="modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+    <div class="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
+      
+      <!-- Tombol Close -->
+      <button
+        onclick="document.getElementById('modal').classList.add('hidden')"
+        class="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-xl"
+      >
+        &times;
+      </button>
 
-            <!-- MAC Address -->
-            <div class="mb-4">
-              <label for="modalMacAddress" class="block text-sm font-medium text-blue-800 mb-2">
-                MAC Address
-              </label>
-              <input
-                type="text"
-                id="modalMacAddress"
-                name="macAddress"
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="00:11:22:33:44:55"
-              />
-            </div>
+      <!-- Judul Modal -->
+      <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah Aktivasi Perangkat</h3>
 
-            <!-- Manufacturer -->
-            <div class="mb-4">
-              <label for="modalManufacturer" class="block text-sm font-medium text-blue-800 mb-2">
-                Manufacturer
-              </label>
-              <input
-                type="text"
-                id="modalManufacturer"
-                name="manufacturer"
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="ESP32"
-              />
-            </div>
-
-            <!-- Firmware Version -->
-            <div class="mb-4">
-              <label for="modalFirmwareVersion" class="block text-sm font-medium text-blue-800 mb-2">
-                Firmware Version
-              </label>
-              <input
-                type="text"
-                id="modalFirmwareVersion"
-                name="firmwareVersion"
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="1.0.0"
-              />
-            </div>
-
-            <!-- Firmware Description -->
-            <div class="mb-4 md:col-span-2">
-              <label for="modalFirmwareDescription" class="block text-sm font-medium text-blue-800 mb-2">
-                Firmware Description
-              </label>
-              <textarea
-                id="modalFirmwareDescription"
-                name="firmwareDescription"
-                rows="2"
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="Deskripsi firmware..."
-              ></textarea>
-            </div>
-
-            <!-- WiFi Configuration -->
-            <div class="mb-4">
-              <label for="modalWifiConfiguration" class="block text-sm font-medium text-blue-800 mb-2">
-                WiFi Configuration
-              </label>
-              <textarea
-                id="modalWifiConfiguration"
-                name="wifiConfiguration"
-                rows="3"
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder='{"ssid": "MyWiFi"}'
-              ></textarea>
-            </div>
-
-            <!-- I/O Configuration -->
-            <div class="mb-4">
-              <label for="modalIoConfiguration" class="block text-sm font-medium text-blue-800 mb-2">
-                I/O Configuration
-              </label>
-              <textarea
-                id="modalIoConfiguration"
-                name="ioConfiguration"
-                rows="3"
-                class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder='{"inputs": ["GPIO1"]}'
-              ></textarea>
-            </div>
-
+      <!-- Form -->
+      <form method="POST" action="/activations/new">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Device ID -->
+          <div class="mb-4">
+            <label for="modalDeviceId" class="block text-sm font-medium text-blue-800 mb-2">
+              Device ID *
+            </label>
+            <input
+              type="text"
+              id="modalDeviceId"
+              name="deviceId"
+              required
+              class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="123ABC"
+            />
           </div>
-          <div class="text-right mt-6">
-            <button
-              type="submit"
-              class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
-            >
-              Simpan
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+
+        <!-- Tombol Simpan -->
+        <div class="text-right mt-6">
+          <button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
+
 
   </body>
 </html>
@@ -910,3 +749,4 @@ app.get("/api/stats", (req, res) => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`🚀 Server berjalan di http://192.168.1.30:${port}`);
 });
+

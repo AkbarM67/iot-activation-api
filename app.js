@@ -60,35 +60,35 @@ app.post("/activate", (req, res) => {
     });
   }
 
-db.query(
-  "SELECT * FROM activations WHERE device_id = ?",
-  [deviceId],
-  (err2, existing) => {
-    if (err2) return res.status(500).json({ error: err2 });
+  db.query(
+    "SELECT * FROM activations WHERE device_id = ?",
+    [deviceId],
+    (err2, existing) => {
+      if (err2) return res.status(500).json({ error: err2 });
 
-    const queryParams = [
-      owner,
-      author,
-      manufacturer,
-      firmwareVersion,
-      firmwareDescription,
-      deviceName,
-      wifiSsid,
-      wifiPassword,
-      activationDate,
-      deactivationDate,
-      endpointHost,
-      endpointPort,
-      endpointPath,
-      ioPin,
-      macAddress,
-      deviceId
-    ];
+      const queryParams = [
+        owner,
+        author,
+        manufacturer,
+        firmwareVersion,
+        firmwareDescription,
+        deviceName,
+        wifiSsid,
+        wifiPassword,
+        activationDate,
+        deactivationDate,
+        endpointHost,
+        endpointPort,
+        endpointPath,
+        ioPin,
+        macAddress,
+        deviceId
+      ];
 
-    if (existing.length > 0) {
-      // UPDATE DATA
-      db.query(
-        `UPDATE activations SET 
+      if (existing.length > 0) {
+        // UPDATE DATA
+        db.query(
+          `UPDATE activations SET 
           owner = ?, 
           author = ?, 
           manufacturer = ?, 
@@ -105,26 +105,26 @@ db.query(
           io_pin = ?,
           mac_address = ?
         WHERE device_id = ?`,
-        queryParams,
-        (err3) => {
-          if (err3)
-            return res.status(500).json({
-              message: "Gagal update aktivasi",
-              error: err3
+          queryParams,
+          (err3) => {
+            if (err3)
+              return res.status(500).json({
+                message: "Gagal update aktivasi",
+                error: err3
+              });
+
+            return res.status(200).json({
+              message: "Aktivasi diperbarui",
+              status: true,
+              deviceId
             });
+          }
+        );
 
-          return res.status(200).json({
-            message: "Aktivasi diperbarui",
-            status: true,
-            deviceId
-          });
-        }
-      );
-
-    } else {
-      // INSERT DATA BARU
-      db.query(
-        `INSERT INTO activations (
+      } else {
+        // INSERT DATA BARU
+        db.query(
+          `INSERT INTO activations (
           owner,
           author,
           manufacturer,
@@ -142,25 +142,25 @@ db.query(
           mac_address,
           device_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        queryParams,
-        (err4, result) => {
-          if (err4)
-            return res.status(500).json({
-              message: "Gagal insert aktivasi",
-              error: err4
-            });
+          queryParams,
+          (err4, result) => {
+            if (err4)
+              return res.status(500).json({
+                message: "Gagal insert aktivasi",
+                error: err4
+              });
 
-          return res.status(201).json({
-            message: "Aktivasi berhasil ditambahkan",
-            status: true,
-            activationId: result.insertId,
-            deviceId
-          });
-        }
-      );
+            return res.status(201).json({
+              message: "Aktivasi berhasil ditambahkan",
+              status: true,
+              activationId: result.insertId,
+              deviceId
+            });
+          }
+        );
+      }
     }
-  }
-);
+  );
 
 });
 
@@ -222,9 +222,10 @@ app.get("/activations/new", (req, res) => {
     </html>
   `);
 });
-app.post("/activations/new", (req, res) => {
-  const { 
-    deviceId, 
+/* ========== FORM TAMBAH AKTIVASI ========== */
+app.post("/activations/new", async (req, res) => {
+  const {
+    deviceId,
     macAddress,
     manufacturer,
     firmwareVersion,
@@ -233,84 +234,93 @@ app.post("/activations/new", (req, res) => {
     ioConfiguration
   } = req.body;
 
-  if (!deviceId)
-    return res.send(
+  if (!deviceId) {
+    return res.status(400).send(
       'Device ID wajib diisi. <a href="/activations/new">Kembali</a>'
     );
+  }
 
   const owner = "Unknown";
+  const author = "System";
   const activationDate = new Date();
-  const deactivationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 hari
-  
-  const finalMacAddress = macAddress || "";
-  const finalManufacturer = manufacturer || "";
-  const finalFirmwareVersion = firmwareVersion || "";
-  const finalFirmwareDescription = firmwareDescription || "";
-  const finalWifiConfiguration = wifiConfiguration || "";
-  const finalIoConfiguration = ioConfiguration || "";
+  const deactivationDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 tahun
 
-  // 1. Pastikan deviceId sudah ada di tabel devices
-  db.query("SELECT * FROM devices WHERE id = ?", [deviceId], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.send(
-        'Gagal cek device. <a href="/activations/new">Coba lagi</a>'
-      );
-    }
+  try {
+    // 1. Pastikan device ada di tabel devices
+    const [deviceExists] = await db.promise().query(
+      "SELECT id FROM devices WHERE id = ?",
+      [deviceId]
+    );
 
-    if (result.length === 0) {
+    if (deviceExists.length === 0) {
       // Tambahkan device jika belum ada
-      db.query(
+      await db.promise().query(
         "INSERT INTO devices (id, name) VALUES (?, ?)",
-        [deviceId, "Unknown"],
-        (err2) => {
-          if (err2) {
-            console.error(err2);
-            return res.send(
-              'Gagal menambahkan device. <a href="/activations/new">Coba lagi</a>'
-            );
-          }
-          simpanAktivasi();
-        }
+        [deviceId, "Unknown"]
       );
-    } else {
-      simpanAktivasi();
     }
-  });
 
-  function simpanAktivasi() {
-    db.query(
-      "INSERT INTO activations (device_id, owner, activation_date, deactivation_date, mac_address, manufacturer, firmware_version, firmware_description, wifi_configuration, io_configuration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    // 2. Simpan aktivasi
+    await db.promise().query(
+      `INSERT INTO activations (
+        device_id, 
+        owner,
+        author,
+        activation_date, 
+        deactivation_date,
+        mac_address,
+        manufacturer,
+        firmware_version,
+        firmware_description,
+        wifi_ssid,
+        wifi_password,
+        io_pin
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         deviceId,
         owner,
+        author,
         activationDate,
         deactivationDate,
-        finalMacAddress,
-        finalManufacturer,
-        finalFirmwareVersion,
-        finalFirmwareDescription,
-        finalWifiConfiguration,
-        finalIoConfiguration,
-      ],
-      (err) => {
-        if (err) {
-          console.error(err);
-          return res.send(
-            'Gagal menyimpan aktivasi. <a href="/activations/new">Coba lagi</a>'
-          );
-        }
-
-        res.send("Aktivasi berhasil disimpan!");
-      }
+        macAddress || "",
+        manufacturer || "Unknown",
+        firmwareVersion || "1.0.0",
+        firmwareDescription || "",
+        wifiConfiguration?.ssid || "",
+        wifiConfiguration?.password || "",
+        ioConfiguration || ""
+      ]
     );
+
+    // 3. Redirect ke halaman aktivasi setelah 2 detik
+    // res.send(`
+    //   <div class="p-4 bg-green-100 text-green-800 rounded mb-4">
+    //     Aktivasi berhasil disimpan! Redirecting...
+    //   </div>
+    //   <script>
+    //     setTimeout(() => {
+    //       window.location.href = '/activations';
+    //     }, 2000);
+    //   </script>
+    // `);
+
+    res.redirect("/activations?success=true");
+
+  } catch (err) {
+    console.error("Error saat menyimpan aktivasi:", err);
+    res.status(500).send(`
+      <div class="p-4 bg-red-100 text-red-800 rounded mb-4">
+        Gagal menyimpan aktivasi: ${err.message}
+      </div>
+      <a href="/activations/new" class="text-blue-600 hover:underline">Coba lagi</a>
+    `);
   }
 });
 
-  // 2. Fungsi untuk menyimpan aktivasi
-  function simpanAktivasi() {
-    db.query(
-      `INSERT INTO activations (
+// 2. Fungsi untuk menyimpan aktivasi
+function simpanAktivasi() {
+  db.query(
+    `INSERT INTO activations (
         device_id, 
         owner, 
         activation_date, 
@@ -322,29 +332,29 @@ app.post("/activations/new", (req, res) => {
         wifi_configuration,
         io_configuration
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        deviceId, 
-        owner, 
-        activationDate, 
-        deactivationDate,
-        finalMacAddress,
-        finalManufacturer,
-        finalFirmwareVersion,
-        finalFirmwareDescription,
-        finalWifiConfiguration,
-        finalIoConfiguration
-      ],
-      (err) => {
-        if (err) {
-          console.error(err);
-          return res.send(
-            'Gagal simpan aktivasi. <a href="/activations/new">Coba lagi</a>'
-          );
-        }
-        res.redirect("/activations");
+    [
+      deviceId,
+      owner,
+      activationDate,
+      deactivationDate,
+      finalMacAddress,
+      finalManufacturer,
+      finalFirmwareVersion,
+      finalFirmwareDescription,
+      finalWifiConfiguration,
+      finalIoConfiguration
+    ],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.send(
+          'Gagal simpan aktivasi. <a href="/activations/new">Coba lagi</a>'
+        );
       }
-    );
-  }
+      res.redirect("/activations");
+    }
+  );
+}
 
 /* ========== TABEL AKTIVASI ========== */
 app.get("/activations", (req, res) => {
@@ -440,11 +450,10 @@ app.get("/activations", (req, res) => {
           <td class="px-3 py-3 text-xs">${new Date(row.deactivation_date).toLocaleString()}</td>
           <td class="px-3 py-3 font-mono text-xs">${row.endpoint_host}:${row.endpoint_port}${row.endpoint_path}</td>
           <td class="px-3 py-3">${row.io_pin}</td>
-          <td class="px-3 py-3 ${
-            row.status === "Aktif"
-              ? "text-green-600 font-bold"
-              : "text-red-600 font-bold"
-          }">${row.status}</td>
+          <td class="px-3 py-3 ${row.status === "Aktif"
+          ? "text-green-600 font-bold"
+          : "text-red-600 font-bold"
+        }">${row.status}</td>
         </tr>
       `;
     });
@@ -501,6 +510,11 @@ app.get("/activations", (req, res) => {
 
     <!-- Script Modal -->
     <script>
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("success") === "true") {
+        alert("Aktivasi berhasil disimpan!");
+      }
+
       function toggleModal() {
         const modal = document.getElementById("modal");
         modal.classList.toggle("hidden");

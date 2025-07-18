@@ -4,6 +4,7 @@ const { activationPage } = require("./view");
 const app = express();
 const port = 3000;
 
+app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -11,7 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "rajawali",
+  password: "",
   database: "iot_activation",
 });
 
@@ -188,9 +189,8 @@ app.get("/activations/new", (req, res) => {
       </h1>
 
       <!-- Form -->
-      <form method="POST" action="/activations/new" class="max-w-4xl bg-white p-8 rounded shadow border border-blue-200">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+        <form id="deviceForm">        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
           <!-- Device ID -->
           <div class="mb-6">
             <label for="deviceId" class="block text-lg font-medium text-blue-800 mb-2">
@@ -222,11 +222,15 @@ app.get("/activations/new", (req, res) => {
     </html>
   `);
 });
-
 app.post("/activations/new", (req, res) => {
   const { 
     deviceId, 
-    
+    macAddress,
+    manufacturer,
+    firmwareVersion,
+    firmwareDescription,
+    wifiConfiguration,
+    ioConfiguration
   } = req.body;
 
   if (!deviceId)
@@ -274,6 +278,35 @@ app.post("/activations/new", (req, res) => {
     }
   });
 
+  function simpanAktivasi() {
+    db.query(
+      "INSERT INTO activations (device_id, owner, activation_date, deactivation_date, mac_address, manufacturer, firmware_version, firmware_description, wifi_configuration, io_configuration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        deviceId,
+        owner,
+        activationDate,
+        deactivationDate,
+        finalMacAddress,
+        finalManufacturer,
+        finalFirmwareVersion,
+        finalFirmwareDescription,
+        finalWifiConfiguration,
+        finalIoConfiguration,
+      ],
+      (err) => {
+        if (err) {
+          console.error(err);
+          return res.send(
+            'Gagal menyimpan aktivasi. <a href="/activations/new">Coba lagi</a>'
+          );
+        }
+
+        res.send("Aktivasi berhasil disimpan!");
+      }
+    );
+  }
+});
+
   // 2. Fungsi untuk menyimpan aktivasi
   function simpanAktivasi() {
     db.query(
@@ -312,7 +345,6 @@ app.post("/activations/new", (req, res) => {
       }
     );
   }
-});
 
 /* ========== TABEL AKTIVASI ========== */
 app.get("/activations", (req, res) => {
@@ -359,8 +391,15 @@ app.get("/activations", (req, res) => {
   </head>
   <body class="bg-blue-50 p-8 min-h-screen font-sans">
 
-    <h2 class="text-3xl font-bold text-blue-800 mb-6">Daftar Aktivasi Perangkat</h2>
-
+    <div class="flex items-center mb-6">
+      <img src="/Logo_Makerindo.png" alt="Logo" class="w-20 h-20 mr-5" />
+    </div>
+  <div class="flex border justify-between items-center px-4 py-2">
+    <h2 class="text-3xl font-bold text-blue-800">Daftar Aktivasi Perangkat</h2>
+    <button onclick="toggleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+      Tambah DeviceId
+    </button>
+  </div>
     <div class="shadow rounded-lg border border-blue-200 overflow-x-auto">
       <div class="max-h-[600px] overflow-y-auto">
         <table class="min-w-full text-sm text-left divide-y divide-blue-200">
@@ -416,26 +455,23 @@ app.get("/activations", (req, res) => {
       </div>
     </div>
 
-    <!-- Modal Tambah Aktivasi -->
-    <!-- Modal Tambah Aktivasi -->
-<div id="modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
-    <div class="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
-      
-      <!-- Tombol Close -->
-      <button
-        onclick="document.getElementById('modal').classList.add('hidden')"
-        class="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-xl"
-      >
-        &times;
-      </button>
+ <!-- Modal Dialog -->
+    <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40">
+      <div class="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
 
-      <!-- Judul Modal -->
-      <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah DeviceID </h3>
+        <!-- Tombol Close -->
+        <button
+          onclick="toggleModal()"
+          class="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-xl"
+        >
+          &times;
+        </button>
 
-      <!-- Form -->
-      <form method="POST" action="/activations/new">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Device ID -->
+        <!-- Judul Modal -->
+        <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah DeviceID</h3>
+
+        <!-- Form -->
+        <form method="POST" action="/activations/new">
           <div class="mb-4">
             <label for="modalDeviceId" class="block text-sm font-medium text-blue-800 mb-2">
               Device ID *
@@ -449,22 +485,28 @@ app.get("/activations", (req, res) => {
               placeholder="123ABC"
             />
           </div>
-        </div>
 
-        <!-- Tombol Simpan -->
-        <div class="text-right mt-6">
-          <button
-            type="submit"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
-          >
-            Simpan
-          </button>
-        </div>
-      </form>
+          <!-- Tombol Simpan -->
+          <div class="text-right mt-6">
+            <button
+              type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded shadow"
+            >
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
 
-
+    <!-- Script Modal -->
+    <script>
+      function toggleModal() {
+        const modal = document.getElementById("modal");
+        modal.classList.toggle("hidden");
+        modal.classList.toggle("flex");
+      }
+    </script>
   </body>
 </html>
     `;

@@ -1,4 +1,4 @@
-export const activationPage = (results) => {
+const activationPage = (results) => {
   let html = `
 
 `;

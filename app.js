@@ -414,6 +414,56 @@ app.get("/activations", (req, res) => {
         </table>
       </div>
     </div>
+
+    <!-- Modal Tambah Aktivasi -->
+    <!-- Modal Tambah Aktivasi -->
+<div id="modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+    <div class="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
+      
+      <!-- Tombol Close -->
+      <button
+        onclick="document.getElementById('modal').classList.add('hidden')"
+        class="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-xl"
+      >
+        &times;
+      </button>
+
+      <!-- Judul Modal -->
+      <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah DeviceID </h3>
+
+      <!-- Form -->
+      <form method="POST" action="/activations/new">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Device ID -->
+          <div class="mb-4">
+            <label for="modalDeviceId" class="block text-sm font-medium text-blue-800 mb-2">
+              Device ID *
+            </label>
+            <input
+              type="text"
+              id="modalDeviceId"
+              name="deviceId"
+              required
+              class="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="123ABC"
+            />
+          </div>
+        </div>
+
+        <!-- Tombol Simpan -->
+        <div class="text-right mt-6">
+          <button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium px-6 py-3 rounded shadow"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
   </body>
 </html>
     `;

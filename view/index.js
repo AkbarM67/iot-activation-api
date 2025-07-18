@@ -1,5 +1,6 @@
-const activationPage = (results) => {
+export const activationPage = (results) => {
   let html = `
+
 `;
-return html;
+  return html;
 };

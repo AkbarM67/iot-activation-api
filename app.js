@@ -11,7 +11,7 @@ app.use(express.urlencoded({ extended: true }));
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "",
+  password: "rajawali",
   database: "iot_activation",
 });
 
@@ -23,130 +23,144 @@ db.connect((err) => {
   console.log("✅ Koneksi DB berhasil");
 });
 
+
+
 /* ========== ENDPOINT IoT AKTIVASI ========== */
 app.post("/activate", (req, res) => {
-  const { 
-    deviceId, 
-    owner, 
-    activationDate, 
-    deactivationDate,
-    macAddress,
-    manufacturer,
-    firmwareVersion,
-    firmwareDescription,
-    wifiConfiguration,
-    ioConfiguration
+  const {
+    device_configuration,
+    wifi_configuration,
+    io_configuration,
+    activation,
+    endpoint_configuration: endpoint,
   } = req.body;
 
-  if (!deviceId || !activationDate || !deactivationDate) {
-    return res
-      .status(400)
-      .json({
-        message: "deviceId, activationDate, dan deactivationDate wajib diisi",
-      });
+  const deviceId = device_configuration?.deviceId;
+  const deviceName = device_configuration?.device_name || "Unknown";
+  const owner = device_configuration?.owner_name || "Unknown";
+  const author = device_configuration?.author || "Unknown";
+  const macAddress = device_configuration?.mac_address || "";
+  const manufacturer = device_configuration?.Manufacturer || "Unknown";
+  const firmwareVersion = device_configuration?.["Firmware Version"] || "1.0.0";
+  const firmwareDescription = device_configuration?.["Firmware Description"] || "";
+  const activationDate = activation?.activationDate || new Date();
+  const deactivationDate = activation?.deactivationDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  const wifiSsid = wifi_configuration?.wifi_ssid || "";
+  const wifiPassword = wifi_configuration?.wifi_password || "";
+  const endpointHost = endpoint?.endpoint_host || "localhost";
+  const endpointPort = endpoint?.port || 3000;
+  const endpointPath = endpoint?.endpoint_path || "/api/endpoint";
+  const ioPin = io_configuration?.io_pin || "";
+
+  if (!deviceId) {
+    return res.status(400).json({
+      message: "deviceId wajib diisi.",
+      status: false
+    });
   }
 
-  const finalOwner = owner || "Unknown";
-  const finalMacAddress = macAddress || "";
-  const finalManufacturer = manufacturer || "Unknown";
-  const finalFirmwareVersion = firmwareVersion || "1.0.0";
-  const finalFirmwareDescription = firmwareDescription || "";
-  const finalWifiConfiguration = wifiConfiguration || "";
-  const finalIoConfiguration = ioConfiguration || "";
+db.query(
+  "SELECT * FROM activations WHERE device_id = ?",
+  [deviceId],
+  (err2, existing) => {
+    if (err2) return res.status(500).json({ error: err2 });
 
-  // 1. Cek apakah device sudah terdaftar di tabel devices
-  db.query("SELECT * FROM devices WHERE id = ?", [deviceId], (err, result) => {
-    if (err) return res.status(500).json({ error: err });
+    const queryParams = [
+      owner,
+      author,
+      manufacturer,
+      firmwareVersion,
+      firmwareDescription,
+      deviceName,
+      wifiSsid,
+      wifiPassword,
+      activationDate,
+      deactivationDate,
+      endpointHost,
+      endpointPort,
+      endpointPath,
+      ioPin,
+      macAddress,
+      deviceId
+    ];
 
-    if (result.length === 0) {
-      // ❌ Device tidak ditemukan, tolak permintaan
-      return res
-        .status(404)
-        .json({
-          message: `Device ID '${deviceId}' belum terdaftar di sistem.`,
-        });
+    if (existing.length > 0) {
+      // UPDATE DATA
+      db.query(
+        `UPDATE activations SET 
+          owner = ?, 
+          author = ?, 
+          manufacturer = ?, 
+          firmware_version = ?, 
+          firmware_description = ?, 
+          device_name = ?,
+          wifi_ssid = ?,
+          wifi_password = ?,
+          activation_date = ?, 
+          deactivation_date = ?,
+          endpoint_host = ?,
+          endpoint_port = ?,
+          endpoint_path = ?,
+          io_pin = ?,
+          mac_address = ?
+        WHERE device_id = ?`,
+        queryParams,
+        (err3) => {
+          if (err3)
+            return res.status(500).json({
+              message: "Gagal update aktivasi",
+              error: err3
+            });
+
+          return res.status(200).json({
+            message: "Aktivasi diperbarui",
+            status: true,
+            deviceId
+          });
+        }
+      );
+
+    } else {
+      // INSERT DATA BARU
+      db.query(
+        `INSERT INTO activations (
+          owner,
+          author,
+          manufacturer,
+          firmware_version,
+          firmware_description,
+          device_name,
+          wifi_ssid,
+          wifi_password,
+          activation_date,
+          deactivation_date,
+          endpoint_host,
+          endpoint_port,
+          endpoint_path,
+          io_pin,
+          mac_address,
+          device_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        queryParams,
+        (err4, result) => {
+          if (err4)
+            return res.status(500).json({
+              message: "Gagal insert aktivasi",
+              error: err4
+            });
+
+          return res.status(201).json({
+            message: "Aktivasi berhasil ditambahkan",
+            status: true,
+            activationId: result.insertId,
+            deviceId
+          });
+        }
+      );
     }
-
-    // 2. Jika ada, update aktivasi
-    db.query(
-      `UPDATE activations SET 
-        owner = ?, 
-        activation_date = ?, 
-        deactivation_date = ?,
-        mac_address = ?,
-        manufacturer = ?,
-        firmware_version = ?,
-        firmware_description = ?,
-        wifi_configuration = ?,
-        io_configuration = ?
-      WHERE device_id = ?`,
-      [
-        finalOwner, 
-        activationDate, 
-        deactivationDate, 
-        finalMacAddress,
-        finalManufacturer,
-        finalFirmwareVersion,
-        finalFirmwareDescription,
-        finalWifiConfiguration,
-        finalIoConfiguration,
-        deviceId
-      ],
-      (err2, result2) => {
-        if (err2) return res.status(500).json({ error: err2 });
-        res.status(200).json({
-          message: "Aktivasi diperbarui",
-          deviceId,
-          owner: finalOwner,
-          macAddress: finalMacAddress,
-          manufacturer: finalManufacturer,
-          firmwareVersion: finalFirmwareVersion
-        });
-      }
-    );
-  });
-
-  // 2. Simpan aktivasi baru
-  function simpanAktivasi() {
-    db.query(
-      `INSERT INTO activations (
-        device_id, 
-        owner, 
-        activation_date, 
-        deactivation_date,
-        mac_address,
-        manufacturer,
-        firmware_version,
-        firmware_description,
-        wifi_configuration,
-        io_configuration
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        deviceId, 
-        finalOwner, 
-        activationDate, 
-        deactivationDate,
-        finalMacAddress,
-        finalManufacturer,
-        finalFirmwareVersion,
-        finalFirmwareDescription,
-        finalWifiConfiguration,
-        finalIoConfiguration
-      ],
-      (err3, result) => {
-        if (err3) return res.status(500).json({ error: err3 });
-        res.status(201).json({
-          message: "Aktivasi sukses",
-          activationId: result.insertId,
-          deviceId,
-          owner: finalOwner,
-          macAddress: finalMacAddress,
-          manufacturer: finalManufacturer,
-          firmwareVersion: finalFirmwareVersion
-        });
-      }
-    );
   }
+);
+
 });
 
 /* ========== FORM TAMBAH AKTIVASI ========== */
@@ -304,28 +318,35 @@ app.post("/activations/new", (req, res) => {
 app.get("/activations", (req, res) => {
   const sql = `
     SELECT 
-      a.device_id, 
-      d.name AS device_name, 
-      a.owner, 
-      a.activation_date, 
-      a.deactivation_date,
-      a.mac_address,
-      a.manufacturer,
-      a.firmware_version,
-      a.firmware_description,
-      a.wifi_configuration,
-      a.io_configuration,
+      device_id,
+      mac_address,
+      owner,
+      author,
+      manufacturer,
+      firmware_version,
+      firmware_description,
+      device_name,
+      wifi_ssid,
+      wifi_password,
+      activation_date,
+      deactivation_date,
+      endpoint_host,
+      endpoint_port,
+      endpoint_path,
+      io_pin,
       CASE 
-        WHEN NOW() BETWEEN a.activation_date AND a.deactivation_date THEN 'Aktif'
+        WHEN NOW() BETWEEN activation_date AND deactivation_date THEN 'Aktif'
         ELSE 'Nonaktif'
       END AS status
-    FROM activations a
-    LEFT JOIN devices d ON a.device_id = d.id
-    ORDER BY a.activation_date DESC
+    FROM activations
+    ORDER BY activation_date DESC
   `;
 
   db.query(sql, (err, results) => {
-    if (err) return res.send("❌ Gagal ambil data.");
+    if (err) {
+      console.log(err)
+      return res.send("❌ Gagal ambil data.");
+    };
 
     let html = `
 <!DOCTYPE html>
@@ -338,62 +359,57 @@ app.get("/activations", (req, res) => {
   </head>
   <body class="bg-blue-50 p-8 min-h-screen font-sans">
 
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-3xl font-bold text-blue-800">Daftar Aktivasi Perangkat</h2>
-      <button onclick="document.getElementById('modal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white text-xl px-6 py-3 rounded shadow">
-        + Tambah Aktivasi
-      </button>
-    </div>
+    <h2 class="text-3xl font-bold text-blue-800 mb-6">Daftar Aktivasi Perangkat</h2>
 
-    <!-- Tabel Aktivasi -->
     <div class="shadow rounded-lg border border-blue-200 overflow-x-auto">
       <div class="max-h-[600px] overflow-y-auto">
         <table class="min-w-full text-sm text-left divide-y divide-blue-200">
           <thead class="bg-blue-100 text-blue-800 uppercase text-xs font-semibold sticky top-0 z-10">
             <tr>
-              <th class="px-3 py-3 min-w-[100px]">Device ID</th>
-              <th class="px-3 py-3 min-w-[120px]">Nama Device</th>
-              <th class="px-3 py-3 min-w-[100px]">Owner</th>
-              <th class="px-3 py-3 min-w-[130px]">MAC Address</th>
-              <th class="px-3 py-3 min-w-[120px]">Manufacturer</th>
-              <th class="px-3 py-3 min-w-[100px]">Firmware Ver</th>
-              <th class="px-3 py-3 min-w-[150px]">Firmware Desc</th>
-              <th class="px-3 py-3 min-w-[120px]">WiFi Config</th>
-              <th class="px-3 py-3 min-w-[120px]">I/O Config</th>
-              <th class="px-3 py-3 min-w-[130px]">Tanggal Aktif</th>
-              <th class="px-3 py-3 min-w-[130px]">Tanggal Akhir</th>
-              <th class="px-3 py-3 min-w-[80px]">Status</th>
+              <th class="px-3 py-3">Device ID</th>
+              <th class="px-3 py-3">MAC</th>
+              <th class="px-3 py-3">Owner</th>
+              <th class="px-3 py-3">Author</th>
+              <th class="px-3 py-3">Manufacturer</th>
+              <th class="px-3 py-3">Firmware</th>
+              <th class="px-3 py-3">Description</th>
+              <th class="px-3 py-3">Device Name</th>
+              <th class="px-3 py-3">WiFi SSID</th>
+              <th class="px-3 py-3">Activation</th>
+              <th class="px-3 py-3">Deactivation</th>
+              <th class="px-3 py-3">Endpoint</th>
+              <th class="px-3 py-3">I/O Pin</th>
+              <th class="px-3 py-3">Status</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-blue-100">
-`;
-
-    // Loop data
-    results.forEach((row) => {
-      html += `
-      <tr class="hover:bg-blue-50 transition">
-        <td class="px-3 py-3 font-medium">${row.device_id}</td>
-        <td class="px-3 py-3">${row.device_name || "-"}</td>
-        <td class="px-3 py-3">${row.owner}</td>
-        <td class="px-3 py-3 font-mono text-xs">${row.mac_address || "-"}</td>
-        <td class="px-3 py-3">${row.manufacturer || "-"}</td>
-        <td class="px-3 py-3 font-mono text-xs">${row.firmware_version || "-"}</td>
-        <td class="px-3 py-3 max-w-[150px] truncate" title="${row.firmware_description || "-"}">${row.firmware_description || "-"}</td>
-        <td class="px-3 py-3 max-w-[120px] truncate font-mono text-xs" title="${row.wifi_configuration || "-"}">${row.wifi_configuration || "-"}</td>
-        <td class="px-3 py-3 max-w-[120px] truncate font-mono text-xs" title="${row.io_configuration || "-"}">${row.io_configuration || "-"}</td>
-        <td class="px-3 py-3 text-xs">${new Date(row.activation_date).toLocaleString()}</td>
-        <td class="px-3 py-3 text-xs">${new Date(row.deactivation_date).toLocaleString()}</td>
-        <td class="px-3 py-3 ${
-          row.status === "Aktif"
-            ? "text-green-600 font-bold"
-            : "text-red-600 font-bold"
-        }">${row.status}</td>
-      </tr>
     `;
+
+    results.forEach(row => {
+      html += `
+        <tr class="hover:bg-blue-50">
+          <td class="px-3 py-3 font-mono text-xs">${row.device_id}</td>
+          <td class="px-3 py-3 font-mono text-xs">${row.mac_address}</td>
+          <td class="px-3 py-3">${row.owner}</td>
+          <td class="px-3 py-3">${row.author}</td>
+          <td class="px-3 py-3">${row.manufacturer}</td>
+          <td class="px-3 py-3">${row.firmware_version}</td>
+          <td class="px-3 py-3">${row.firmware_description}</td>
+          <td class="px-3 py-3">${row.device_name}</td>
+          <td class="px-3 py-3 font-mono text-xs">${row.wifi_ssid}</td>
+          <td class="px-3 py-3 text-xs">${new Date(row.activation_date).toLocaleString()}</td>
+          <td class="px-3 py-3 text-xs">${new Date(row.deactivation_date).toLocaleString()}</td>
+          <td class="px-3 py-3 font-mono text-xs">${row.endpoint_host}:${row.endpoint_port}${row.endpoint_path}</td>
+          <td class="px-3 py-3">${row.io_pin}</td>
+          <td class="px-3 py-3 ${
+            row.status === "Aktif"
+              ? "text-green-600 font-bold"
+              : "text-red-600 font-bold"
+          }">${row.status}</td>
+        </tr>
+      `;
     });
 
-    // Akhiran HTML
     html += `
           </tbody>
         </table>
@@ -451,10 +467,13 @@ app.get("/activations", (req, res) => {
 
   </body>
 </html>
-`;
+    `;
+
     res.send(html);
   });
 });
+
+
 
 /* ========== API ENDPOINTS UNTUK MOBILE ========== */
 
@@ -750,4 +769,3 @@ app.get("/api/stats", (req, res) => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`🚀 Server berjalan di http://192.168.1.30:${port}`);
 });
-

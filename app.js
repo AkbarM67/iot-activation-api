@@ -24,8 +24,6 @@ db.connect((err) => {
   console.log("✅ Koneksi DB berhasil");
 });
 
-
-
 /* ========== ENDPOINT IoT AKTIVASI ========== */
 app.post("/activate", (req, res) => {
   const {
@@ -42,9 +40,10 @@ app.post("/activate", (req, res) => {
   const author = device_configuration?.author || "Unknown";
   const macAddress = device_configuration?.mac_address || "";
   const manufacturer = device_configuration?.Manufacturer || "Unknown";
+  const mikroType = device_configuration?.["MicroController Type"] || "Unknown";
   const firmwareVersion = device_configuration?.["Firmware Version"] || "1.0.0";
   const firmwareDescription = device_configuration?.["Firmware Description"] || "";
-  const activationDate = activation?.activationDate || new Date();
+  const activationDate = activation?.activationDate || null;
   const deactivationDate = activation?.deactivationDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
   const wifiSsid = wifi_configuration?.wifi_ssid || "";
   const wifiPassword = wifi_configuration?.wifi_password || "";
@@ -70,6 +69,7 @@ app.post("/activate", (req, res) => {
         owner,
         author,
         manufacturer,
+        mikroType,
         firmwareVersion,
         firmwareDescription,
         deviceName,
@@ -92,6 +92,7 @@ app.post("/activate", (req, res) => {
           owner = ?, 
           author = ?, 
           manufacturer = ?, 
+          mikro_type = ?,
           firmware_version = ?, 
           firmware_description = ?, 
           device_name = ?,
@@ -128,6 +129,7 @@ app.post("/activate", (req, res) => {
           owner,
           author,
           manufacturer,
+          mikro_type,
           firmware_version,
           firmware_description,
           device_name,
@@ -141,7 +143,7 @@ app.post("/activate", (req, res) => {
           io_pin,
           mac_address,
           device_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           queryParams,
           (err4, result) => {
             if (err4)
@@ -161,7 +163,6 @@ app.post("/activate", (req, res) => {
       }
     }
   );
-
 });
 
 /* ========== FORM TAMBAH AKTIVASI ========== */
@@ -171,7 +172,7 @@ app.get("/activations/new", (req, res) => {
     <html lang="id">
     <head>
       <meta charset="UTF-8" />
-      <title>Tambah DeviceID  </title>
+      <title>Tambah DeviceID</title>
       <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-blue-50 p-8 min-h-screen font-sans">
@@ -183,15 +184,14 @@ app.get("/activations/new", (req, res) => {
         </a>
       </div>
 
-
       <!-- Judul -->
       <h1 class="text-3xl font-bold text-blue-800 mb-8">
-        Tambah DeviceID 
+        Tambah DeviceID
       </h1>
 
-
       <!-- Form -->
-        <form id="deviceForm">        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form id="deviceForm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
           <!-- Device ID -->
           <div class="mb-6">
@@ -208,7 +208,20 @@ app.get("/activations/new", (req, res) => {
             />
           </div>
 
-          
+          <!-- Mikrolontroler Type -->
+          <div class="mb-6">
+            <label for="mikroType" class="block text-lg font-medium text-blue-800 mb-2">
+              Mikrolontroler Type
+            </label>
+            <input
+              type="text"
+              id="mikroType"
+              name="mikroType"
+              class="w-full px-4 py-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+              placeholder="Contoh: ESP32, Arduino Uno, etc."
+            />
+          </div>
+        </div>
 
         <div class="mt-8">
           <button
@@ -224,12 +237,13 @@ app.get("/activations/new", (req, res) => {
     </html>
   `);
 });
-/* ========== FORM TAMBAH AKTIVASI ========== */
+
 app.post("/activations/new", async (req, res) => {
   const {
     deviceId,
     macAddress,
     manufacturer,
+    mikroType,
     firmwareVersion,
     firmwareDescription,
     wifiConfiguration,
@@ -244,7 +258,7 @@ app.post("/activations/new", async (req, res) => {
 
   const owner = "Unknown";
   const author = "System";
-  const activationDate = new Date();
+  const activationDate = null;
   const deactivationDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 tahun
 
   try {
@@ -272,12 +286,13 @@ app.post("/activations/new", async (req, res) => {
         deactivation_date,
         mac_address,
         manufacturer,
+        mikro_type,
         firmware_version,
         firmware_description,
         wifi_ssid,
         wifi_password,
         io_pin
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         deviceId,
         owner,
@@ -286,6 +301,7 @@ app.post("/activations/new", async (req, res) => {
         deactivationDate,
         macAddress || "",
         manufacturer || "Unknown",
+        mikroType || "Unknown",
         firmwareVersion || "1.0.0",
         firmwareDescription || "",
         wifiConfiguration?.ssid || "",
@@ -293,18 +309,6 @@ app.post("/activations/new", async (req, res) => {
         ioConfiguration || ""
       ]
     );
-
-    // 3. Redirect ke halaman aktivasi setelah 2 detik
-    // res.send(`
-    //   <div class="p-4 bg-green-100 text-green-800 rounded mb-4">
-    //     Aktivasi berhasil disimpan! Redirecting...
-    //   </div>
-    //   <script>
-    //     setTimeout(() => {
-    //       window.location.href = '/activations';
-    //     }, 2000);
-    //   </script>
-    // `);
 
     res.redirect("/activations?success=true");
 
@@ -319,45 +323,6 @@ app.post("/activations/new", async (req, res) => {
   }
 });
 
-// 2. Fungsi untuk menyimpan aktivasi
-function simpanAktivasi() {
-  db.query(
-    `INSERT INTO activations (
-        device_id, 
-        owner, 
-        activation_date, 
-        deactivation_date,
-        mac_address,
-        manufacturer,
-        firmware_version,
-        firmware_description,
-        wifi_configuration,
-        io_configuration
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      deviceId,
-      owner,
-      activationDate,
-      deactivationDate,
-      finalMacAddress,
-      finalManufacturer,
-      finalFirmwareVersion,
-      finalFirmwareDescription,
-      finalWifiConfiguration,
-      finalIoConfiguration
-    ],
-    (err) => {
-      if (err) {
-        console.error(err);
-        return res.send(
-          'Gagal simpan aktivasi. <a href="/activations/new">Coba lagi</a>'
-        );
-      }
-      res.redirect("/activations");
-    }
-  );
-}
-
 /* ========== TABEL AKTIVASI ========== */
 app.get("/activations", (req, res) => {
   const sql = `
@@ -367,6 +332,7 @@ app.get("/activations", (req, res) => {
       owner,
       author,
       manufacturer,
+      mikro_type,
       firmware_version,
       firmware_description,
       device_name,
@@ -406,12 +372,12 @@ app.get("/activations", (req, res) => {
     <div class="flex items-center mb-6">
       <img src="/Logo_Makerindo.png" alt="Logo" class="w-20 h-20 mr-5" />
     </div>
-  <div class="flex border justify-between items-center px-4 py-2">
-    <h2 class="text-3xl font-bold text-blue-800">Daftar Aktivasi Perangkat</h2>
-    <button onclick="toggleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-      Tambah DeviceId
-    </button>
-  </div>
+    <div class="flex border justify-between items-center px-4 py-2">
+      <h2 class="text-3xl font-bold text-blue-800">Daftar Aktivasi Perangkat</h2>
+      <button onclick="toggleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+        Tambah DeviceId
+      </button>
+    </div>
     <div class="shadow rounded-lg border border-blue-200 overflow-x-auto">
       <div class="max-h-[600px] overflow-y-auto">
         <table class="min-w-full text-sm text-left divide-y divide-blue-200">
@@ -422,6 +388,7 @@ app.get("/activations", (req, res) => {
               <th class="px-3 py-3">Owner</th>
               <th class="px-3 py-3">Author</th>
               <th class="px-3 py-3">Manufacturer</th>
+              <th class="px-3 py-3">Mikro Type</th>
               <th class="px-3 py-3">Firmware</th>
               <th class="px-3 py-3">Description</th>
               <th class="px-3 py-3">Device Name</th>
@@ -444,6 +411,7 @@ app.get("/activations", (req, res) => {
           <td class="px-3 py-3">${row.owner}</td>
           <td class="px-3 py-3">${row.author}</td>
           <td class="px-3 py-3">${row.manufacturer}</td>
+          <td class="px-3 py-3">${row.mikro_type || "Unknown"}</td>
           <td class="px-3 py-3">${row.firmware_version}</td>
           <td class="px-3 py-3">${row.firmware_description}</td>
           <td class="px-3 py-3">${row.device_name}</td>
@@ -466,7 +434,7 @@ app.get("/activations", (req, res) => {
       </div>
     </div>
 
- <!-- Modal Dialog -->
+    <!-- Modal Dialog -->
     <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40">
       <div class="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
 
@@ -536,8 +504,6 @@ app.get("/activations", (req, res) => {
   });
 });
 
-
-
 /* ========== API ENDPOINTS UNTUK MOBILE ========== */
 
 // GET - Ambil semua data aktivasi (untuk mobile)
@@ -551,10 +517,12 @@ app.get("/api/activations", (req, res) => {
       a.deactivation_date,
       a.mac_address,
       a.manufacturer,
+      a.mikro_type,
       a.firmware_version,
       a.firmware_description,
-      a.wifi_configuration,
-      a.io_configuration,
+      a.wifi_ssid,
+      a.wifi_password,
+      a.io_pin,
       CASE 
         WHEN NOW() BETWEEN a.activation_date AND a.deactivation_date THEN 'Aktif'
         ELSE 'Nonaktif'
@@ -586,10 +554,12 @@ app.get("/api/activations", (req, res) => {
       deactivation_date: row.deactivation_date,
       mac_address: row.mac_address || "",
       manufacturer: row.manufacturer || "Unknown",
+      mikro_type: row.mikro_type || "Unknown",
       firmware_version: row.firmware_version || "1.0.0",
       firmware_description: row.firmware_description || "",
-      wifi_configuration: row.wifi_configuration || "",
-      io_configuration: row.io_configuration || "",
+      wifi_ssid: row.wifi_ssid || "",
+      wifi_password: row.wifi_password || "",
+      io_pin: row.io_pin || "",
       status: row.status,
       is_active: row.is_active,
       activation_date_formatted: new Date(row.activation_date).toLocaleDateString('id-ID'),
@@ -618,10 +588,12 @@ app.get("/api/activations/:deviceId", (req, res) => {
       a.deactivation_date,
       a.mac_address,
       a.manufacturer,
+      a.mikro_type,
       a.firmware_version,
       a.firmware_description,
-      a.wifi_configuration,
-      a.io_configuration,
+      a.wifi_ssid,
+      a.wifi_password,
+      a.io_pin,
       CASE 
         WHEN NOW() BETWEEN a.activation_date AND a.deactivation_date THEN 'Aktif'
         ELSE 'Nonaktif'
@@ -661,10 +633,12 @@ app.get("/api/activations/:deviceId", (req, res) => {
       deactivation_date: row.deactivation_date,
       mac_address: row.mac_address || "",
       manufacturer: row.manufacturer || "Unknown",
+      mikro_type: row.mikro_type || "Unknown",
       firmware_version: row.firmware_version || "1.0.0",
       firmware_description: row.firmware_description || "",
-      wifi_configuration: row.wifi_configuration || "",
-      io_configuration: row.io_configuration || "",
+      wifi_ssid: row.wifi_ssid || "",
+      wifi_password: row.wifi_password || "",
+      io_pin: row.io_pin || "",
       status: row.status,
       is_active: row.is_active,
       activation_date_formatted: new Date(row.activation_date).toLocaleDateString('id-ID'),
@@ -690,10 +664,12 @@ app.get("/api/activations/active", (req, res) => {
       a.deactivation_date,
       a.mac_address,
       a.manufacturer,
+      a.mikro_type,
       a.firmware_version,
       a.firmware_description,
-      a.wifi_configuration,
-      a.io_configuration,
+      a.wifi_ssid,
+      a.wifi_password,
+      a.io_pin,
       'Aktif' AS status,
       true AS is_active
     FROM activations a
@@ -719,10 +695,12 @@ app.get("/api/activations/active", (req, res) => {
       deactivation_date: row.deactivation_date,
       mac_address: row.mac_address || "",
       manufacturer: row.manufacturer || "Unknown",
+      mikro_type: row.mikro_type || "Unknown",
       firmware_version: row.firmware_version || "1.0.0",
       firmware_description: row.firmware_description || "",
-      wifi_configuration: row.wifi_configuration || "",
-      io_configuration: row.io_configuration || "",
+      wifi_ssid: row.wifi_ssid || "",
+      wifi_password: row.wifi_password || "",
+      io_pin: row.io_pin || "",
       status: row.status,
       is_active: row.is_active,
       activation_date_formatted: new Date(row.activation_date).toLocaleDateString('id-ID'),
@@ -745,6 +723,7 @@ app.get("/api/status/:deviceId", (req, res) => {
   const sql = `
     SELECT 
       a.device_id,
+      a.mikro_type,
       CASE 
         WHEN NOW() BETWEEN a.activation_date AND a.deactivation_date THEN 'Aktif'
         ELSE 'Nonaktif'
@@ -783,6 +762,7 @@ app.get("/api/status/:deviceId", (req, res) => {
       message: "Status perangkat berhasil diambil",
       data: {
         device_id: row.device_id,
+        mikro_type: row.mikro_type || "Unknown",
         status: row.status,
         is_active: row.is_active,
         activation_date: row.activation_date,
@@ -801,7 +781,8 @@ app.get("/api/stats", (req, res) => {
       COUNT(*) as total_activations,
       SUM(CASE WHEN NOW() BETWEEN activation_date AND deactivation_date THEN 1 ELSE 0 END) as active_devices,
       SUM(CASE WHEN NOW() NOT BETWEEN activation_date AND deactivation_date THEN 1 ELSE 0 END) as inactive_devices,
-      COUNT(DISTINCT manufacturer) as total_manufacturers
+      COUNT(DISTINCT manufacturer) as total_manufacturers,
+      COUNT(DISTINCT mikro_type) as total_mikro_types
     FROM activations
   `;
 
@@ -822,7 +803,8 @@ app.get("/api/stats", (req, res) => {
         total_activations: stats.total_activations,
         active_devices: stats.active_devices,
         inactive_devices: stats.inactive_devices,
-        total_manufacturers: stats.total_manufacturers
+        total_manufacturers: stats.total_manufacturers,
+        total_mikro_types: stats.total_mikro_types
       }
     });
   });

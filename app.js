@@ -212,6 +212,7 @@ app.get("/activations/new", (req, res) => {
 app.post("/activations/new", (req, res) => {
   const { 
     deviceId, 
+    
   } = req.body;
 
   if (!deviceId)

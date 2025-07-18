@@ -183,10 +183,12 @@ app.get("/activations/new", (req, res) => {
         </a>
       </div>
 
+
       <!-- Judul -->
       <h1 class="text-3xl font-bold text-blue-800 mb-8">
         Tambah DeviceID 
       </h1>
+
 
       <!-- Form -->
         <form id="deviceForm">        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -478,6 +480,11 @@ app.get("/activations", (req, res) => {
 
         <!-- Judul Modal -->
         <h3 class="text-2xl font-bold text-blue-800 mb-6">Tambah DeviceID</h3>
+
+        <div class="p-4 bg-blue-100 text-blue-800 rounded-md shadow">
+          Informasi
+           <h1> - Format DeviceID [123ABC]</h1>
+        </div>
 
         <!-- Form -->
         <form method="POST" action="/activations/new">
